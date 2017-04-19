@@ -32,4 +32,5 @@ if __name__ == '__main__':
     num_results =len(results)
     for result in results:
         result.wait()
+        # side of the below access is that the result message is removed from the RabbitMQ broker
         print('id(%s) status(%s) result(%i)' % (result.id, result.status, result.result))
