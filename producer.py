@@ -78,6 +78,8 @@ def do_multistep_job(name):
 #
 # 3. Started the celery workers:
 #       $ celery worker --app=consumer:APP -c 2 --loglevel=info
+#       # show workers statistics:
+#       $ celery worker --app=consumer:APP inspect stats
 #
 # 4. Monitor celery:
 #       $ flower --app=consumer:APP --port=5555 --broker_api=http://guest:guest@localhost:15672/api/
