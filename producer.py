@@ -78,6 +78,9 @@ def do_multistep_job(name):
 #
 # 3. Started the celery workers:
 #       $ celery worker --app=consumer:APP -c 2 --loglevel=info
+#       or $ celery multi start worker1 worker2 --app=consumer:APP -c 1 --loglevel=info
+#          $ celery multi show  worker1 worker2 --app=consumer:APP -c 1 --loglevel=info
+#          $ celery multi restart/stop worker1 worker2 --app=consumer:APP
 #       # show workers statistics:
 #       $ celery worker --app=consumer:APP inspect stats
 #
@@ -92,7 +95,8 @@ if __name__ == '__main__':
     #import pdb
     #pdb.set_trace()
     
-    # (python producer.py job111 &) ; (sleep 3 ; python producer.py job222 &); (sleep 3 ; python producer.py job333 &); (sleep 3 ; python producer.py job444 &); (sleep 3 ; python producer.py job555 &)
+    # bash: (python producer.py job111 &) ; sleep 3 ; (python producer.py job222 &) ; sleep 3 ; (python producer.py job333 &) ; sleep 3 ; (python producer.py job444 &) ; sleep 3 ; (python producer.py job555 &)
+    # csh: python producer.py job111 & ; sleep 3 ; python producer.py job222 & ; sleep 3 ; python producer.py job333 & ; sleep 3 ; python producer.py job444 & ; sleep 3 ; python producer.py job555 &
     job_name = sys.argv[1] if len(sys.argv) > 1 else 'job' 
     do_multistep_job(job_name)
 
