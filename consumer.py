@@ -8,7 +8,7 @@ from kombu import Exchange, Queue
 APP = Celery('producer') # producer.py is where we have defined all of the APP.task()s
 
 # sets APP's configuration from file, resetting any exisitng configurations
-APP.config_from_object('config')   # sets APP._config_source, guessing settings at APP.start() 
+APP.config_from_object('config')   # sets APP._config_source as well
 
 # above is a  short cut to the following:
 #APP.conf.update(CELERY_ACKS_LATE=True)
