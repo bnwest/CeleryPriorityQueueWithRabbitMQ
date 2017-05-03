@@ -38,12 +38,12 @@ def step3(name, priority=3):
 
 @APP.task(queue='celery', priority=7)
 def step4(name, priority=4):
-    time.sleep(10)
+    time.sleep(2)
     return name
 
 @APP.task(queue='celery', priority=9)
 def step5(name, priority=5):
-    time.sleep(5)
+    time.sleep(1)
     return name
 
 def do_multistep_job(name):
@@ -56,11 +56,27 @@ def do_multistep_job(name):
     result3 = step3.apply_async((name,5), priority=5)
     result3.wait()
     #time.sleep(3)
-    result4 = step4.apply_async((name,7), priority=7)
-    result4.wait()
+    result41 = step4.apply_async((name,7), priority=7)
+    result42 = step4.apply_async((name,7), priority=7)
+    result43 = step4.apply_async((name,7), priority=7)
+    result44 = step4.apply_async((name,7), priority=7)
+    result45 = step4.apply_async((name,7), priority=7)
+    result41.wait()
+    result42.wait()
+    result43.wait()
+    result44.wait()
+    result45.wait()
     #time.sleep(3)
-    result5 = step5.apply_async((name,9), priority=9)
-    result5.wait()
+    result51 = step5.apply_async((name,9), priority=9)
+    result52 = step5.apply_async((name,9), priority=9)
+    result53 = step5.apply_async((name,9), priority=9)
+    result54 = step5.apply_async((name,9), priority=9)
+    result55 = step5.apply_async((name,9), priority=9)
+    result51.wait()
+    result52.wait()
+    result53.wait()
+    result54.wait()
+    result55.wait()
 
 
 #
@@ -71,18 +87,22 @@ def do_multistep_job(name):
 #       # cycle RabbitMQ:
 #       $ rabbitmqctl stop_app; rabbitmqctl reset; rabbitmqctl start_app
 #       # list queues
-#       $ rabbitmqctl list_queues name messages consumers
+#       # unacknowledged => running on a celery worker
+#       # ready => ready to be handed of to a celery worker
+#       $ rabbitmqctl list_queues name messages_unacknowledged messages_ready messages consumers
 #
 # 2. Monitor RabbitMQ:
 #       => http://localhost:15672/
 #
 # 3. Started the celery workers:
 #       $ celery worker --app=consumer:APP -c 2 --loglevel=info
-#       or $ celery multi start worker1 worker2 --app=consumer:APP -c 1 --loglevel=info
-#          $ celery multi show  worker1 worker2 --app=consumer:APP -c 1 --loglevel=info
+#       or $ celery multi show   worker1 worker2 --app=consumer:APP -c 1 --loglevel=info
+#          $ celery multi start  worker1 worker2 --app=consumer:APP -c 1 --loglevel=info
 #          $ celery multi restart/stop worker1 worker2 --app=consumer:APP
 #       # show workers statistics:
-#       $ celery worker --app=consumer:APP inspect stats
+#       $ celery --app=consumer:APP inspect stats
+#       # show configuration:
+#       $ celery --app=consumer:APP inspect config
 #
 # 4. Monitor celery:
 #       $ flower --app=consumer:APP --port=5555 --broker_api=http://guest:guest@localhost:15672/api/
@@ -94,7 +114,7 @@ import sys
 if __name__ == '__main__':
     #import pdb
     #pdb.set_trace()
-    
+
     # bash: (python producer.py job111 &) ; sleep 3 ; (python producer.py job222 &) ; sleep 3 ; (python producer.py job333 &) ; sleep 3 ; (python producer.py job444 &) ; sleep 3 ; (python producer.py job555 &)
     # csh: python producer.py job111 & ; sleep 3 ; python producer.py job222 & ; sleep 3 ; python producer.py job333 & ; sleep 3 ; python producer.py job444 & ; sleep 3 ; python producer.py job555 &
     job_name = sys.argv[1] if len(sys.argv) > 1 else 'job' 
