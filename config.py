@@ -19,14 +19,14 @@ task_queues = (
     Queue('celery', Exchange('celery'), routing_key='celery', queue_arguments={'x-max-priority': 10}),
 )
 
+# If enabled task results will include the workers stack when re-raising task errors.
+task_remote_tracebacks = True
+
 # http://docs.celeryproject.org/en/latest/userguide/optimizing.html
 # When using the default of early acknowledgment, having a prefetch multiplier setting of one,
 # means the worker will reserve at most one extra task for every worker process: or in other words,
 # if the worker is started with -c 10, the worker may reserve at most 20 tasks
 # (10 unacknowledged tasks executing, and 10 unacknowledged reserved tasks) at any time.
-
-# If enabled task results will include the workers stack when re-raising task errors.
-task_remote_tracebacks = True
 
 # Only one Celery task at a time per worker
 # =========================================
