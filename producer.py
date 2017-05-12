@@ -1,8 +1,9 @@
 import time
 from consumer import APP
+import pdb
 
 
-@APP.task(queue='celery') # add priority= here
+@APP.task(queue='celery') # could add priority here
 def do_stuff(priority):
     time.sleep(5)
     return priority
@@ -47,6 +48,7 @@ def step5(name, priority=5):
     return name
 
 def do_multistep_job(name):
+    #pdb.set_trace()
     result1 = step1.apply_async((name,1), priority=1)
     result1.wait()
     #time.sleep(3)
@@ -77,6 +79,14 @@ def do_multistep_job(name):
     result53.wait()
     result54.wait()
     result55.wait()
+
+
+@APP.task(queue='celery', priority=10)
+def do_divide_by_zero(name, priority):
+    x = 5
+    y = x -5
+    z = x / y
+    return name
 
 
 #
@@ -112,12 +122,18 @@ def do_multistep_job(name):
 
 import sys
 if __name__ == '__main__':
-    #import pdb
     #pdb.set_trace()
+    job_name = sys.argv[1] if len(sys.argv) > 1 else 'job' 
+
+    # this causes an exception to be thrown by the celery worker. testing task_remote_tracebacks.
+    result = do_divide_by_zero.apply_async((job_name,10), priority=10)
+    try:
+        result.wait()
+    except:
+        print(result.traceback)
 
     # bash: (python producer.py job111 &) ; sleep 3 ; (python producer.py job222 &) ; sleep 3 ; (python producer.py job333 &) ; sleep 3 ; (python producer.py job444 &) ; sleep 3 ; (python producer.py job555 &)
     # csh: python producer.py job111 & ; sleep 3 ; python producer.py job222 & ; sleep 3 ; python producer.py job333 & ; sleep 3 ; python producer.py job444 & ; sleep 3 ; python producer.py job555 &
-    job_name = sys.argv[1] if len(sys.argv) > 1 else 'job' 
     do_multistep_job(job_name)
 
     #results = run_priority_tasks()
@@ -126,5 +142,3 @@ if __name__ == '__main__':
     #    result.wait()
     #    # side effect of the below access is that the result message is removed from the RabbitMQ broker
     #    print('id(%s) status(%s) result(%i)' % (result.id, result.status, result.result))
-
-    
