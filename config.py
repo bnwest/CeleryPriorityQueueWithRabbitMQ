@@ -12,7 +12,7 @@ RMQVHOST = "/"
 # redundant since this is equivalent to the default broker ...
 # but we need that since there is no default results backend ...
 broker_url = 'amqp://%s:%s@%s:%i' % (RMQUSERNAME, RMQPASSWORD, RMQHOST, RMQPORT)
-result_backend = broker_url
+result_backend = 'rpc://'
 
 imports = ['producer',]
 task_queues = (
