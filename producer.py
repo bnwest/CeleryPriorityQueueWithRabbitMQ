@@ -1,12 +1,12 @@
 import time
+
+from celery.exceptions import TimeoutError
+from billiard.exceptions import TimeLimitExceeded
+
 from consumer import APP
+from tasks import *
+
 import pdb
-
-
-@APP.task(queue='celery') # could add priority here
-def do_stuff(priority):
-    time.sleep(5)
-    return priority
 
 def run_priority_tasks():
     results = [ do_stuff.apply_async((pri,),  priority=pri) for pri in range (1,11) ]
@@ -20,32 +20,6 @@ def run_priority_tasks():
     #results.append( do_stuff.apply_async((0,)            ) )
 
     return results
-
-
-@APP.task(queue='celery', priority=1)
-def step1(name, priority=1):
-    time.sleep(5)
-    return name
-
-@APP.task(queue='celery', priority=3)
-def step2(name, priority=2):
-    time.sleep(20)
-    return name
-
-@APP.task(queue='celery', priority=5)
-def step3(name, priority=3):
-    time.sleep(5)
-    return name
-
-@APP.task(queue='celery', priority=7)
-def step4(name, priority=4):
-    time.sleep(2)
-    return name
-
-@APP.task(queue='celery', priority=9)
-def step5(name, priority=5):
-    time.sleep(1)
-    return name
 
 def do_multistep_job(name):
     #pdb.set_trace()
@@ -79,15 +53,6 @@ def do_multistep_job(name):
     result53.wait()
     result54.wait()
     result55.wait()
-
-
-@APP.task(queue='celery', priority=10)
-def do_divide_by_zero(name, priority):
-    x = 5
-    y = x -5
-    z = x / y
-    return name
-
 
 #
 # Prerequites:
@@ -125,20 +90,53 @@ if __name__ == '__main__':
     #pdb.set_trace()
     job_name = sys.argv[1] if len(sys.argv) > 1 else 'job' 
 
-    # this causes an exception to be thrown by the celery worker. testing task_remote_tracebacks.
-    result = do_divide_by_zero.apply_async((job_name,10), priority=10)
-    try:
-        result.wait()
-    except:
-        print(result.traceback)
+    task_throws_exception = False
+    if task_throws_exception:
+        # this causes an exception to be thrown by the celery worker. testing task_remote_tracebacks.
+        result = do_divide_by_zero.apply_async((job_name,10), priority=10)
+        try:
+            result.wait()
+        except:
+            print(result.traceback)
 
-    # bash: (python producer.py job111 &) ; sleep 3 ; (python producer.py job222 &) ; sleep 3 ; (python producer.py job333 &) ; sleep 3 ; (python producer.py job444 &) ; sleep 3 ; (python producer.py job555 &)
-    # csh: python producer.py job111 & ; sleep 3 ; python producer.py job222 & ; sleep 3 ; python producer.py job333 & ; sleep 3 ; python producer.py job444 & ; sleep 3 ; python producer.py job555 &
-    do_multistep_job(job_name)
+    celery_worker_timeout = True
+    if celery_worker_timeout:
+        try:
+            task_time = 30
+            result1 = do_timelimit_test.apply_async((job_name+'1',task_time), priority=10, time_limit=15)
+            result2 = do_timelimit_test.apply_async((job_name+'2',task_time), priority=10, time_limit=15)
+            result3 = do_timelimit_test.apply_async((job_name+'3',task_time), priority=10, time_limit=15)
+            result4 = do_timelimit_test.apply_async((job_name+'4',task_time), priority=10, time_limit=15)
+            #APP.control.revoke(result1.id, terminate=True)
+            result1.wait()
+            result2.wait()
+            result3.wait()
+            result4.wait()
+        except TimeLimitExceeded as err:
+            print(err)
+            pass
 
-    #results = run_priority_tasks()
-    #num_results =len(results)
-    #for result in results:
-    #    result.wait()
-    #    # side effect of the below access is that the result message is removed from the RabbitMQ broker
-    #    print('id(%s) status(%s) result(%i)' % (result.id, result.status, result.result))
+    task_caller_timeout = True
+    if task_caller_timeout:
+        try:
+            task_time = 30
+            result1 = do_timelimit_test.apply_async((job_name+'1',task_time),)
+            result1.wait(timeout=5)
+        except TimeoutError as err:
+            print(err)
+            pass
+
+    manually_chains_tasks = False
+    if manually_chains_tasks:
+        # bash: (python producer.py job111 &) ; sleep 3 ; (python producer.py job222 &) ; sleep 3 ; (python producer.py job333 &) ; sleep 3 ; (python producer.py job444 &) ; sleep 3 ; (python producer.py job555 &)
+        # csh: python producer.py job111 & ; sleep 3 ; python producer.py job222 & ; sleep 3 ; python producer.py job333 & ; sleep 3 ; python producer.py job444 & ; sleep 3 ; python producer.py job555 &
+        do_multistep_job(job_name)
+
+    test_priority_queues = False
+    if test_priority_queues:
+        results = run_priority_tasks()
+        num_results =len(results)
+        for result in results:
+            result.wait()
+            # side effect of the below access is that the result message is removed from the RabbitMQ broker
+            print('id(%s) status(%s) result(%i)' % (result.id, result.status, result.result))
