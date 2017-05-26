@@ -1,7 +1,8 @@
 import time
 
 from celery.exceptions import TimeoutError
-from billiard.exceptions import TimeLimitExceeded
+from billiard.exceptions  import TimeLimitExceeded as Celery3_TimeLimitExceeded
+from celery.exceptions    import TimeLimitExceeded as Celery4_TimeLimitExceeded
 
 from consumer import APP
 from tasks import *
@@ -77,7 +78,7 @@ def do_multistep_job(name):
 #       # show workers statistics:
 #       $ celery --app=consumer:APP inspect stats
 #       # show configuration:
-#       $ celery --app=consumer:APP inspect config
+#       $ celery --app=consumer:APP inspect conf
 #
 # 4. Monitor celery:
 #       $ flower --app=consumer:APP --port=5555 --broker_api=http://guest:guest@localhost:15672/api/
@@ -90,49 +91,60 @@ if __name__ == '__main__':
     #pdb.set_trace()
     job_name = sys.argv[1] if len(sys.argv) > 1 else 'job' 
 
-    task_throws_exception = False
-    if task_throws_exception:
-        # this causes an exception to be thrown by the celery worker. testing task_remote_tracebacks.
-        result = do_divide_by_zero.apply_async((job_name,10), priority=10)
+    test_task_throws_exception = True
+    if test_task_throws_exception:
         try:
+            # this causes an exception to be thrown by the celery worker. testing task_remote_tracebacks.
+            result = do_divide_by_zero.apply_async((job_name,10),)
             result.wait()
         except:
             print(result.traceback)
 
-    celery_worker_timeout = True
-    if celery_worker_timeout:
+    test_celery_worker_timeout = True
+    if test_celery_worker_timeout:
         try:
             task_time = 30
-            result1 = do_timelimit_test.apply_async((job_name+'1',task_time), priority=10, time_limit=15)
-            result2 = do_timelimit_test.apply_async((job_name+'2',task_time), priority=10, time_limit=15)
-            result3 = do_timelimit_test.apply_async((job_name+'3',task_time), priority=10, time_limit=15)
-            result4 = do_timelimit_test.apply_async((job_name+'4',task_time), priority=10, time_limit=15)
+            celery_worker_timeout = 15
+            result1 = do_timelimit_test.apply_async((job_name+'-1',task_time), time_limit=celery_worker_timeout)
+            result2 = do_timelimit_test.apply_async((job_name+'-2',task_time), time_limit=celery_worker_timeout)
+            result3 = do_timelimit_test.apply_async((job_name+'-3',task_time), time_limit=celery_worker_timeout)
+            result4 = do_timelimit_test.apply_async((job_name+'-4',task_time), time_limit=celery_worker_timeout)
             #APP.control.revoke(result1.id, terminate=True)
             result1.wait()
             result2.wait()
             result3.wait()
             result4.wait()
-        except TimeLimitExceeded as err:
+        except Celery3_TimeLimitExceeded as err:
             print(err)
             pass
+        except Celery4_TimeLimitExceeded as err:
+            # python says: celery.backends.base.TimeLimitExceeded: TimeLimitExceeded(15,)
+            # closest I can find is: celery.exceptions.TimeLimitExceeded
+            print(err)
+            pass
+        except:
+            # HACK until I can figure out what exception isreally being returned
+            print(result1.traceback)
+            pass
 
-    task_caller_timeout = True
-    if task_caller_timeout:
+    test_task_caller_timeout = True
+    if test_task_caller_timeout:
         try:
             task_time = 30
-            result1 = do_timelimit_test.apply_async((job_name+'1',task_time),)
-            result1.wait(timeout=5)
+            task_caller_timeout = 5
+            result1 = do_timelimit_test.apply_async((job_name+'-5',task_time),)
+            result1.wait(timeout=task_caller_timeout)
         except TimeoutError as err:
             print(err)
             pass
 
-    manually_chains_tasks = False
-    if manually_chains_tasks:
+    test_manually_chained_priority_tasks = True
+    if test_manually_chained_priority_tasks:
         # bash: (python producer.py job111 &) ; sleep 3 ; (python producer.py job222 &) ; sleep 3 ; (python producer.py job333 &) ; sleep 3 ; (python producer.py job444 &) ; sleep 3 ; (python producer.py job555 &)
         # csh: python producer.py job111 & ; sleep 3 ; python producer.py job222 & ; sleep 3 ; python producer.py job333 & ; sleep 3 ; python producer.py job444 & ; sleep 3 ; python producer.py job555 &
         do_multistep_job(job_name)
 
-    test_priority_queues = False
+    test_priority_queues = True
     if test_priority_queues:
         results = run_priority_tasks()
         num_results =len(results)
