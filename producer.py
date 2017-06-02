@@ -1,11 +1,13 @@
 import time
 
-from celery.exceptions import TimeoutError
+from celery.exceptions    import TimeoutError
 from billiard.exceptions  import TimeLimitExceeded as Celery3_TimeLimitExceeded
 from celery.exceptions    import TimeLimitExceeded as Celery4_TimeLimitExceeded
 
 from consumer import APP
 from tasks import *
+
+from celery import signature, group
 
 import pdb
 
@@ -123,7 +125,7 @@ if __name__ == '__main__':
             print(err)
             pass
         except:
-            # HACK until I can figure out what exception isreally being returned
+            # HACK until I can figure out what exception is really being returned
             print(result1.traceback)
             pass
 
@@ -134,6 +136,36 @@ if __name__ == '__main__':
             task_caller_timeout = 5
             result1 = do_timelimit_test.apply_async((job_name+'-5',task_time),)
             result1.wait(timeout=task_caller_timeout)
+        except TimeoutError as err:
+            print(err)
+            pass
+
+    test_timeout_from_signature = True
+    if test_timeout_from_signature:
+        try:
+            task_time = 30
+            task_caller_timeout   = 15
+            celery_worker_timeout = 20
+            sig = signature('tasks.do_timelimit_test', args=(job_name+'-6',task_time))
+            result1 = sig.apply_async(time_limit=celery_worker_timeout)
+            #sig.options = { 'time_limit': celery_worker_timeout }
+            #result1 = sig.delay()
+            result1.wait(timeout=task_caller_timeout)
+        except TimeoutError as err:
+            print(err)
+            pass
+
+    test_timeout_from_group = True
+    if test_timeout_from_group:
+        try:
+            task_time = 30
+            task_caller_timeout   = 15
+            celery_worker_timeout = 20
+            sig = signature('tasks.do_timelimit_test', args=(job_name+'-7',task_time))
+            job = group([sig,sig])
+            celery_group_call = job(time_limit=celery_worker_timeout)
+            result1 = celery_group_call.get(timeout=task_caller_timeout)
+            print result1
         except TimeoutError as err:
             print(err)
             pass
@@ -150,5 +182,5 @@ if __name__ == '__main__':
         num_results =len(results)
         for result in results:
             result.wait()
-            # side effect of the below access is that the result message is removed from the RabbitMQ broker
+            # side effect of the above access is that the result message is removed from the RabbitMQ broker
             print('id(%s) status(%s) result(%i)' % (result.id, result.status, result.result))

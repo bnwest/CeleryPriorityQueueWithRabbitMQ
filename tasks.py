@@ -34,15 +34,14 @@ def step5(name, priority=5):
     time.sleep(1)
     return name
 
-@APP.task(queue='celery', priority=10)
+@APP.task(queue='celery')
 def do_divide_by_zero(name, priority):
     x = 5
     y = x - 5
     z = x / y
     return name
 
-@APP.task(queue='celery', priority=10)
+@APP.task(queue='celery')
 def do_timelimit_test(name, sleep_time):
     time.sleep(sleep_time)
-    x = 5
-    # return (x-5)/(x-5)
+    return name
