@@ -3,6 +3,7 @@ import time
 from celery.exceptions    import TimeoutError
 from billiard.exceptions  import TimeLimitExceeded as Celery3_TimeLimitExceeded
 from celery.exceptions    import TimeLimitExceeded as Celery4_TimeLimitExceeded
+from celery.exceptions    import SoftTimeLimitExceeded
 
 from consumer import APP
 from tasks import *
@@ -102,32 +103,52 @@ if __name__ == '__main__':
         except:
             print(result.traceback)
 
-    test_celery_worker_timeout = True
-    if test_celery_worker_timeout:
+    test_celery_worker_hard_timeout = True
+    if test_celery_worker_hard_timeout:
         try:
             task_time = 30
-            celery_worker_timeout = 15
-            result1 = do_timelimit_test.apply_async((job_name+'-1',task_time), time_limit=celery_worker_timeout)
-            result2 = do_timelimit_test.apply_async((job_name+'-2',task_time), time_limit=celery_worker_timeout)
-            result3 = do_timelimit_test.apply_async((job_name+'-3',task_time), time_limit=celery_worker_timeout)
-            result4 = do_timelimit_test.apply_async((job_name+'-4',task_time), time_limit=celery_worker_timeout)
-            #APP.control.revoke(result1.id, terminate=True)
+            celery_worker_hard_timeout = 15
+            result1 = do_timelimit_test.apply_async((job_name+'-1',task_time), time_limit=celery_worker_hard_timeout)
+            result2 = do_timelimit_test.apply_async((job_name+'-2',task_time), time_limit=celery_worker_hard_timeout)
+            result3 = do_timelimit_test.apply_async((job_name+'-3',task_time), time_limit=celery_worker_hard_timeout)
             result1.wait()
             result2.wait()
             result3.wait()
-            result4.wait()
+            print result1
+            # expecting the celery worker task to timeout before completion,
+            # which will cause the main celery process to kill and restart its child and
+            # which will cause one of the above wait() calls to throw an exception
         except Celery3_TimeLimitExceeded as err:
             print(err)
-            pass
         except Celery4_TimeLimitExceeded as err:
             # python says: celery.backends.base.TimeLimitExceeded: TimeLimitExceeded(15,)
             # closest I can find is: celery.exceptions.TimeLimitExceeded
             print(err)
-            pass
         except:
             # HACK until I can figure out what exception is really being returned
+            print("Hanndling a TimeLimitExceeded from the celery worker:")
             print(result1.traceback)
-            pass
+
+    test_celery_worker_soft_timeout = True
+    if test_celery_worker_soft_timeout:
+        try:
+            task_time = 30
+            celery_worker_soft_timeout = 15
+            celery_worker_hard_timeout = 20
+            result1 = do_timelimit_test.apply_async((job_name+'-4',task_time),
+                                                    time_limit=celery_worker_hard_timeout,
+                                                    soft_time_limit=celery_worker_soft_timeout)
+            result1.wait()
+            print result1
+            # expecting the celery worker task to timeout before completion,
+            # which cause the celery worker (childof the main) to experience an unhandled soft time out exception and
+            # which propagate to the wait() call 
+        except SoftTimeLimitExceeded as err:
+            print(err)
+        except:
+            # HACK until I can figure out what exception is really being returned
+            print("Hanndling a SoftTimeLimitExceeded from the celery worker:")
+            print(result1.traceback)
 
     test_task_caller_timeout = True
     if test_task_caller_timeout:
@@ -136,39 +157,47 @@ if __name__ == '__main__':
             task_caller_timeout = 5
             result1 = do_timelimit_test.apply_async((job_name+'-5',task_time),)
             result1.wait(timeout=task_caller_timeout)
+            print result1
+            # expecting the wait() call to timeout and throw a TimeoutError exception and
+            # the celery worker task will complete successfully
         except TimeoutError as err:
+            #APP.control.revoke(result1.id, terminate=True)
             print(err)
-            pass
 
     test_timeout_from_signature = True
     if test_timeout_from_signature:
         try:
             task_time = 30
-            task_caller_timeout   = 15
-            celery_worker_timeout = 20
+            task_caller_timeout = 15
+            celery_worker_soft_timeout = 20
+            celery_worker_hard_timeout = 25
             sig = signature('tasks.do_timelimit_test', args=(job_name+'-6',task_time))
-            result1 = sig.apply_async(time_limit=celery_worker_timeout)
+            result1 = sig.apply_async(time_limit=celery_worker_hard_timeout,soft_time_limit=celery_worker_soft_timeout)
             #sig.options = { 'time_limit': celery_worker_timeout }
             #result1 = sig.delay()
             result1.wait(timeout=task_caller_timeout)
+            print result1
+            # expecting the wait() call to timeout and throw a TimeoutError exception and
+            # the celery worker task will complete successfully
         except TimeoutError as err:
             print(err)
-            pass
 
     test_timeout_from_group = True
     if test_timeout_from_group:
         try:
             task_time = 30
             task_caller_timeout   = 15
-            celery_worker_timeout = 20
+            celery_worker_soft_timeout = 20
+            celery_worker_hard_timeout = 25
             sig = signature('tasks.do_timelimit_test', args=(job_name+'-7',task_time))
             job = group([sig,sig])
-            celery_group_call = job(time_limit=celery_worker_timeout)
+            celery_group_call = job(time_limit=celery_worker_hard_timeout,soft_time_limit=celery_worker_soft_timeout)
             result1 = celery_group_call.get(timeout=task_caller_timeout)
             print result1
+            # expecting the get() call to timeout and throw a TimeoutError exception and
+            # the celery worker task will complete successfully
         except TimeoutError as err:
             print(err)
-            pass
 
     test_manually_chained_priority_tasks = True
     if test_manually_chained_priority_tasks:
