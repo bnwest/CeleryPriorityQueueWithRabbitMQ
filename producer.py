@@ -8,7 +8,7 @@ from celery.exceptions    import SoftTimeLimitExceeded
 from consumer import APP
 from tasks import *
 
-from celery import signature, group
+from celery import signature, group, chain
 
 import pdb
 
@@ -24,6 +24,20 @@ def run_priority_tasks():
     #results.append( do_stuff.apply_async((0,)            ) )
 
     return results
+
+def run_chained_tasks():
+    sigs = [  signature('tasks.do_stuff', args=(pri,), immutable=True,  priority=pri) for pri in range (1,11) ]
+    chained_tasks = chain(sigs)
+    res = chained_tasks()
+    res.get()
+    return res
+
+def run_grouped_tasks():
+    sigs = [  signature('tasks.do_stuff', args=(pri,), immutable=True,  priority=pri) for pri in range (1,11) ]
+    grouped_tasks = group(sigs)
+    res = grouped_tasks()
+    res.get()
+    return res
 
 def do_multistep_job(name):
     #pdb.set_trace()
@@ -213,3 +227,11 @@ if __name__ == '__main__':
             result.wait()
             # side effect of the above access is that the result message is removed from the RabbitMQ broker
             print('id(%s) status(%s) result(%i)' % (result.id, result.status, result.result))
+
+    test_chain_tasks = True
+    if test_chain_tasks:
+        run_chained_tasks()
+
+    test_group_tasks = True
+    if test_group_tasks:
+        run_grouped_tasks()
