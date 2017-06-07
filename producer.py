@@ -8,7 +8,7 @@ from celery.exceptions    import SoftTimeLimitExceeded
 from consumer import APP
 from tasks import *
 
-from celery import signature, group, chain
+from celery import signature, group, chain, chord
 
 import pdb
 
@@ -38,6 +38,28 @@ def run_grouped_tasks():
     res = grouped_tasks()
     res.get()
     return res
+
+def run_chord_tasks():
+    sigs = [  signature('tasks.do_stuff', args=(pri,), immutable=True,  priority=pri) for pri in range (1,5) ]
+    header = sigs[0:3]
+    callback = sigs[3]
+    grouped_tasks = group(sigs[0:3])
+
+    # NotImplementedError (not all results backend support):
+    # res = chord(header)(callback)
+
+    # NotImplementedError (below chain gets converted implicitly to  a chord)
+    # res = chain(grouped_tasks, callback)()
+
+    # do it manually:
+    res = grouped_tasks()
+    res.get()
+    results = res.results
+    res =  callback.delay()
+    res.get()
+    results.append(res)
+
+    return results
 
 def do_multistep_job(name):
     #pdb.set_trace()
@@ -235,3 +257,8 @@ if __name__ == '__main__':
     test_group_tasks = True
     if test_group_tasks:
         run_grouped_tasks()
+
+    test_chord_tasks = True
+    if test_chord_tasks:
+        run_chord_tasks()
+
