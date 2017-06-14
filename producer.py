@@ -37,7 +37,7 @@ def run_grouped_tasks():
     grouped_tasks = group(sigs)
     res = grouped_tasks()
     res.get()
-    return res
+    return res.results
 
 def run_chord_tasks():
     sigs = [  signature('tasks.do_stuff', args=(pri,), immutable=True,  priority=pri) for pri in range (1,5) ]
@@ -45,10 +45,10 @@ def run_chord_tasks():
     callback = sigs[3]
     grouped_tasks = group(sigs[0:3])
 
-    # NotImplementedError (not all results backend support):
+    # NotImplementedError (not all results backend support chord):
     # res = chord(header)(callback)
 
-    # NotImplementedError (below chain gets converted implicitly to  a chord)
+    # NotImplementedError (below chain gets converted implicitly to  a chord and thus has same issue as above):
     # res = chain(grouped_tasks, callback)()
 
     # do it manually:
@@ -60,6 +60,31 @@ def run_chord_tasks():
     results.append(res)
 
     return results
+
+def run_sig_chain_group_tasks():
+    sigs = [  signature('tasks.do_stuff', args=(pri,), immutable=True,  priority=pri) for pri in range (1,11) ]
+    sig = sigs[0]
+    chained_tasks = chain(sigs[1:4])
+    grouped_tasks = group(sigs[4:7])
+
+    # chain( sig, chain, group )
+    mother_of_all_tasks = chain(sig, chained_tasks, grouped_tasks)
+    res = mother_of_all_tasks()
+    res.get()
+
+    # chain( sig, group, chain ) # NotImplementedError
+    # chain( chain, group, sig ) # NotImplementedError
+    # chain( chain, sig, group ) # infinite stroll
+    # chain( group, sig, chain ) # NotImplementedError
+    # chain( group, chain, sig ) # NotImplementedError
+    # group( sig, group, chain ) # infinite stroll
+    # group( sig, chain, group ) # infinite stroll
+    # group( chain, sig, group ) # infinite stroll
+    # group( chain, group, sig ) # infinite stroll
+    # group( group, sig, chain ) # infinite stroll
+    # group( group, chain, sig ) # infinite strolls
+
+    return res
 
 def do_multistep_job(name):
     #pdb.set_trace()
@@ -128,7 +153,7 @@ def do_multistep_job(name):
 import sys
 if __name__ == '__main__':
     #pdb.set_trace()
-    job_name = sys.argv[1] if len(sys.argv) > 1 else 'job' 
+    job_name = sys.argv[1] if len(sys.argv) > 1 else 'job'
 
     test_task_throws_exception = True
     if test_task_throws_exception:
@@ -262,3 +287,8 @@ if __name__ == '__main__':
     if test_chord_tasks:
         run_chord_tasks()
 
+    test_canvas_aggregation = True
+    if test_canvas_aggregation:
+        res = run_sig_chain_group_tasks()
+
+    # sys.exit(0xDEADBEEF)
