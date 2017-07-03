@@ -82,7 +82,7 @@ def run_sig_chain_group_tasks():
     # group( chain, sig, group ) # infinite stroll
     # group( chain, group, sig ) # infinite stroll
     # group( group, sig, chain ) # infinite stroll
-    # group( group, chain, sig ) # infinite strolls
+    # group( group, chain, sig ) # infinite stroll
 
     return res
 
@@ -161,6 +161,7 @@ if __name__ == '__main__':
             # this causes an exception to be thrown by the celery worker. testing task_remote_tracebacks.
             result = do_divide_by_zero.apply_async((job_name,10),)
             result.wait()
+            print("Failed to receive a ZeroDivisionError exception.")
         except:
             print(result.traceback)
 
@@ -175,7 +176,7 @@ if __name__ == '__main__':
             result1.wait()
             result2.wait()
             result3.wait()
-            print result1
+            print("FAIL: expecting a worker hard timeout before task completion.")
             # expecting the celery worker task to timeout before completion,
             # which will cause the main celery process to kill and restart its child and
             # which will cause one of the above wait() calls to throw an exception
@@ -200,7 +201,7 @@ if __name__ == '__main__':
                                                     time_limit=celery_worker_hard_timeout,
                                                     soft_time_limit=celery_worker_soft_timeout)
             result1.wait()
-            print result1
+            print("FAIL: expecting a worker soft timeout before task completion.")
             # expecting the celery worker task to timeout before completion,
             # which cause the celery worker (childof the main) to experience an unhandled soft time out exception and
             # which propagate to the wait() call 
@@ -218,7 +219,7 @@ if __name__ == '__main__':
             task_caller_timeout = 5
             result1 = do_timelimit_test.apply_async((job_name+'-5',task_time),)
             result1.wait(timeout=task_caller_timeout)
-            print result1
+            print("FAIL: expecting a call site timeout before task completion.")
             # expecting the wait() call to timeout and throw a TimeoutError exception and
             # the celery worker task will complete successfully
         except TimeoutError as err:
@@ -237,7 +238,7 @@ if __name__ == '__main__':
             #sig.options = { 'time_limit': celery_worker_timeout }
             #result1 = sig.delay()
             result1.wait(timeout=task_caller_timeout)
-            print result1
+            print("FAIL: expecting a worker soft timeout before task completion.")
             # expecting the wait() call to timeout and throw a TimeoutError exception and
             # the celery worker task will complete successfully
         except TimeoutError as err:
@@ -254,7 +255,7 @@ if __name__ == '__main__':
             job = group([sig,sig])
             celery_group_call = job(time_limit=celery_worker_hard_timeout,soft_time_limit=celery_worker_soft_timeout)
             result1 = celery_group_call.get(timeout=task_caller_timeout)
-            print result1
+            print("FAIL: expecting a call site or worker timeout before group task completion.")
             # expecting the get() call to timeout and throw a TimeoutError exception and
             # the celery worker task will complete successfully
         except TimeoutError as err:
@@ -273,6 +274,7 @@ if __name__ == '__main__':
         for result in results:
             result.wait()
             # side effect of the above access is that the result message is removed from the RabbitMQ broker
+            # flower will show the actual, priority execution order of the tasks
             print('id(%s) status(%s) result(%i)' % (result.id, result.status, result.result))
 
     test_chain_tasks = True
@@ -281,14 +283,17 @@ if __name__ == '__main__':
 
     test_group_tasks = True
     if test_group_tasks:
+        # since tasks are submitted as a group, you should see priority queue behavior in flower
         run_grouped_tasks()
 
     test_chord_tasks = True
     if test_chord_tasks:
+        # lesson learned: do not use chords.
         run_chord_tasks()
 
     test_canvas_aggregation = True
     if test_canvas_aggregation:
+        # lesson learned: do not do this. only chain or group signatures.  need more? do it manually.
         res = run_sig_chain_group_tasks()
 
     # sys.exit(0xDEADBEEF)
