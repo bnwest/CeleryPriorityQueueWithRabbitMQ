@@ -39,3 +39,10 @@ worker_prefetch_multiplier = 1
 # Setting this to true allows the message to be re-queued, in the event of a power failure or
 # the worker instance being killed abruptly, so this also means the task must be idempotent
 task_acks_late = True
+
+# Provide backwards Celery3 capatibility
+# ======================================
+
+task_serializer = "pickle"
+result_serializer = "pickle"
+accept_content = ["json", "pickle"]
