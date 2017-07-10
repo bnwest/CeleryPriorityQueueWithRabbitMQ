@@ -1,4 +1,6 @@
 import time
+import pdb
+
 
 from celery.exceptions    import TimeoutError
 from billiard.exceptions  import TimeLimitExceeded as Celery3_TimeLimitExceeded
@@ -9,8 +11,6 @@ from consumer import APP
 from tasks import *
 
 from celery import signature, group, chain, chord
-
-import pdb
 
 def run_priority_tasks():
     results = [ do_stuff.apply_async((pri,),  priority=pri) for pri in range (1,11) ]
@@ -162,7 +162,8 @@ if __name__ == '__main__':
             result = do_divide_by_zero.apply_async((job_name,10),)
             result.wait()
             print("Failed to receive a ZeroDivisionError exception.")
-        except:
+        except ZeroDivisionError as err:
+            print("SUCCESS: Received divide by zero exception:")
             print(result.traceback)
 
     test_celery_worker_hard_timeout = True
@@ -181,14 +182,14 @@ if __name__ == '__main__':
             # which will cause the main celery process to kill and restart its child and
             # which will cause one of the above wait() calls to throw an exception
         except Celery3_TimeLimitExceeded as err:
-            print(err)
+            print("SUCCESS: " + str(err))
         except Celery4_TimeLimitExceeded as err:
             # python says: celery.backends.base.TimeLimitExceeded: TimeLimitExceeded(15,)
             # closest I can find is: celery.exceptions.TimeLimitExceeded
-            print(err)
+            print("SUCCESS: " + str(err))
         except:
             # HACK until I can figure out what exception is really being returned
-            print("Hanndling a TimeLimitExceeded from the celery worker:")
+            print("SUCCESS: Hanndling a TimeLimitExceeded like from the celery worker:")
             print(result1.traceback)
 
     test_celery_worker_soft_timeout = True
@@ -206,10 +207,10 @@ if __name__ == '__main__':
             # which cause the celery worker (childof the main) to experience an unhandled soft time out exception and
             # which propagate to the wait() call 
         except SoftTimeLimitExceeded as err:
-            print(err)
+            print("SUCCESS: " + str(err))
         except:
             # HACK until I can figure out what exception is really being returned
-            print("Hanndling a SoftTimeLimitExceeded from the celery worker:")
+            print("SUCCESS: Hanndling a SoftTimeLimitExceeded like from the celery worker:")
             print(result1.traceback)
 
     test_task_caller_timeout = True
@@ -224,7 +225,7 @@ if __name__ == '__main__':
             # the celery worker task will complete successfully
         except TimeoutError as err:
             #APP.control.revoke(result1.id, terminate=True)
-            print(err)
+            print("SUCCESS: " + str(err))
 
     test_timeout_from_signature = True
     if test_timeout_from_signature:
@@ -242,7 +243,7 @@ if __name__ == '__main__':
             # expecting the wait() call to timeout and throw a TimeoutError exception and
             # the celery worker task will complete successfully
         except TimeoutError as err:
-            print(err)
+            print("SUCCESS: " + str(err))
 
     test_timeout_from_group = True
     if test_timeout_from_group:
@@ -259,7 +260,7 @@ if __name__ == '__main__':
             # expecting the get() call to timeout and throw a TimeoutError exception and
             # the celery worker task will complete successfully
         except TimeoutError as err:
-            print(err)
+            print("SUCCESS: " + str(err))
 
     test_manually_chained_priority_tasks = True
     if test_manually_chained_priority_tasks:
