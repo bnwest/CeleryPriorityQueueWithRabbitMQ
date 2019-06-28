@@ -1,6 +1,6 @@
 from kombu import Exchange, Queue
 
-RMQHOST = "127.0.0.1"
+RMQHOST = "rabbitmq"
 RMQUSERNAME = "guest"
 RMQPASSWORD = "guest"
 RMQPORT = 5672
@@ -12,7 +12,8 @@ RMQVHOST = "/"
 # redundant since this is equivalent to the default broker ...
 # but we need that since there is no default results backend ...
 broker_url = 'amqp://%s:%s@%s:%i' % (RMQUSERNAME, RMQPASSWORD, RMQHOST, RMQPORT)
-result_backend = 'rpc://'
+# result_backend = 'rpc://'
+result_backend = 'redis://redis'
 
 imports = ['producer',]
 task_queues = (
@@ -32,13 +33,29 @@ task_remote_tracebacks = True
 # =========================================
 
 # How many messages to prefetch at a time multiplied by the number of concurrent processes.
-# The default is 4 (four messages for each process). 
+# The default is 4 (four messages for each process).
+# ... if the worker task runs a long time, you do not want one worker to sitting on 4 taks at a time
 worker_prefetch_multiplier = 1
+
+# Time (in seconds, or a timedelta object) for when after stored task tombstones will be deleted.
+# ... for results backends when you are concerned that you will fill up the results backend
+# in a 24 hr period (the default results expires value)
+result_expires = 1 * 60 * 60 # aka 1 hour
+
+# Maximum amount of resident memory, in kilobytes, that may be consumed by a worker before it will be replaced by a new worker.
+# ... when celery workers get too big celery slows down
+worker_max_memory_per_child = 4000000  # 4GB
+
+# Maximum number of tasks a pool worker process can execute before it’s replaced with a new one.
+# ... draconian but ran into an example where a linked C library went sideways on an error
+# and this was the work around
+# worker_max_tasks_per_child = 1
 
 # Task messages will be acknowledged after the task has been executed, not just before (the default behavior)
 # Setting this to true allows the message to be re-queued, in the event of a power failure or
 # the worker instance being killed abruptly, so this also means the task must be idempotent
-task_acks_late = True
+# task_acks_late = True
+# tasks that fail might get resubmitted ad infinitum
 
 # Provide backwards Celery3 capatibility
 # ======================================
