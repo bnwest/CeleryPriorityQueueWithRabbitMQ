@@ -267,6 +267,7 @@ if __name__ == '__main__':
         # bash: (python producer.py job111 &) ; sleep 3 ; (python producer.py job222 &) ; sleep 3 ; (python producer.py job333 &) ; sleep 3 ; (python producer.py job444 &) ; sleep 3 ; (python producer.py job555 &)
         # csh: python producer.py job111 & ; sleep 3 ; python producer.py job222 & ; sleep 3 ; python producer.py job333 & ; sleep 3 ; python producer.py job444 & ; sleep 3 ; python producer.py job555 &
         do_multistep_job(job_name)
+        print('FINSHED: do_multistep_job.')
 
     test_priority_queues = True
     if test_priority_queues:
@@ -278,23 +279,28 @@ if __name__ == '__main__':
             # flower will show the actual, priority execution order of the tasks
             print('id(%s) status(%s) result(%i)' % (result.id, result.status, result.result))
 
-    test_chain_tasks = True
+    test_chain_tasks = False
     if test_chain_tasks:
         run_chained_tasks()
+        print('FINSHED: run_chained_tasks.')
 
     test_group_tasks = True
     if test_group_tasks:
         # since tasks are submitted as a group, you should see priority queue behavior in flower
         run_grouped_tasks()
+        print('FINSHED: run_grouped_tasks.')
 
     test_chord_tasks = True
     if test_chord_tasks:
         # lesson learned: do not use chords.
         run_chord_tasks()
+        print('FINSHED: run_chord_tasks.')
 
-    test_canvas_aggregation = True
+    test_canvas_aggregation = False
     if test_canvas_aggregation:
         # lesson learned: do not do this. only chain or group signatures.  need more? do it manually.
         res = run_sig_chain_group_tasks()
+        print('FINSHED: run_sig_chain_group_tasks.')
 
+    print('Done.')
     # sys.exit(0xDEADBEEF)
