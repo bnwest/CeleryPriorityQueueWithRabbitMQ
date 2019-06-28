@@ -1,0 +1,58 @@
+version: '2'
+services:
+  rabbitmq:  # can be found at localhost:15672 user=guest, pwd=guest
+    image: "rabbitmq:3-management"
+    ports:
+      - "15672:15672"
+
+  redis:
+    image: "redis:alpine"
+
+  redis-commander:  # can be found at localhost:8081
+    container_name: redis-commander
+    hostname: redis-commander
+    image: "rediscommander/redis-commander:latest"
+    restart: always
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+
+  celery-boss:
+    build:
+      context: .
+      dockerfile: dockerfile
+    entrypoint:
+      - python
+      - producer.py
+    volumes:
+      - .:/app
+    links:
+      - rabbitmq
+      - redis
+    depends_on:
+      - rabbitmq
+      - redis
+      - celery-worker
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: dockerfile
+    entrypoint:
+      - celery
+      - worker
+      - -A=consumer.APP
+      - --loglevel=info
+      - --uid=celery
+      - --gid=celery
+    volumes:
+      - .:/app
+    links:
+      - rabbitmq
+      - redis
+    depends_on:
+      - rabbitmq
+      - redis
