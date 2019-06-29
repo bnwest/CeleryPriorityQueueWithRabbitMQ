@@ -42,11 +42,12 @@ worker_prefetch_multiplier = 1
 # in a 24 hr period (the default results expires value)
 result_expires = 1 * 60 * 60 # aka 1 hour
 
-# Maximum amount of resident memory, in kilobytes, that may be consumed by a worker before it will be replaced by a new worker.
+# Maximum amount of resident memory, in kilobytes, that may be consumed by a worker
+# before it will be replaced by a new worker.
 # ... when celery workers get too big celery slows down
 worker_max_memory_per_child = 4000000  # 4GB
 
-# Maximum number of tasks a pool worker process can execute before it’s replaced with a new one.
+# Maximum number of tasks a pool worker process can execute before it's replaced with a new one.
 # ... draconian but ran into an example where a linked C library went sideways on an error
 # and this was the work around
 # worker_max_tasks_per_child = 1
