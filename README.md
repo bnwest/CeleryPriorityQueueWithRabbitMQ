@@ -74,7 +74,7 @@ RabbitMQ is the Celery broker and Redis is the Celery results backend.  The code
 
 The RabbitMQ management console is a part of the docker-compose and can be accessed in a browser via url `localhost:15672` (user=guest, pwd=guest).
 
-The Redis Commander is also part of the docker-compose, but is not not currently working for me.
+The Redis Commander is also part of the docker-compose.  No login is required.
 
 If you manually startup the Celery workers via
 ```bash
