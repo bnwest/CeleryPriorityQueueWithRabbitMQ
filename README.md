@@ -81,7 +81,7 @@ If you manually startup the Celery workers via
 $ docker-compose -f docker-compose.yml up celery-worker
 ```
 you should see on teardown (`docker-compose -f docker-compose.yml stop`):
-````bash
+```bash
 celery-worker_1    | worker: Warm shutdown (MainProcess)
 celery-worker_1    |  
 celery-worker_1    |  -------------- celery@16c150403242 v4.3.0 (rhubarb)
