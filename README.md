@@ -6,7 +6,7 @@ $ docker-compose -f docker-compose.yml build
 ```
 This builds a single image via dockerfile, which will be shared by the `celery-boss` (Celery task producer) and the `celery-worker` (Celery task consumer/worker) docker containers within the docker-compose.
 
-From the avove command you should see:
+From the above command you should see:
 ```bash
 Successfully tagged celerypriorityqueuewithrabbitmq_celery-worker:latest
 Successfully tagged celerypriorityqueuewithrabbitmq_celery-boss:latest
@@ -74,14 +74,14 @@ RabbitMQ is the Celery broker and Redis is the Celery results backend.  The code
 
 The RabbitMQ management console is a part of the docker-compose and can be accessed in a browser via url `localhost:15672` (user=guest, pwd=guest).
 
-The Redis Commander is also part of the docker-compose.  No login is required.
+The Redis Commander is also part of the docker-compose and can be accessed in a browser via url `localhost:8081`.  No login is required.
 
 If you manually startup the Celery workers via
 ```bash
 $ docker-compose -f docker-compose.yml up celery-worker
 ```
-you should see on teardown
-```bash
+you should see on teardown (`docker-compose -f docker-compose.yml stop`):
+````bash
 celery-worker_1    | worker: Warm shutdown (MainProcess)
 celery-worker_1    |  
 celery-worker_1    |  -------------- celery@16c150403242 v4.3.0 (rhubarb)
